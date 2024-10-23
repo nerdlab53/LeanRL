@@ -221,12 +221,6 @@ Prerequisites:
   ```bash
   git clone https://github.com/pytorch-labs/leanrl.git && cd leanrl
   ```
-* Python >=3.7.1,<3.11
-- Upgrade torch to its nightly builds for a better coverage of `torch.compile`:
-  - CUDA 11.8: `pip3 install --upgrade --pre torch --index-url https://download.pytorch.org/whl/nightly/cu118`
-  - CUDA 12.1: `pip3 install --upgrade --pre torch --index-url https://download.pytorch.org/whl/nightly/cu121`
-  - CUDA 12.4: `pip3 install --upgrade --pre torch --index-url https://download.pytorch.org/whl/nightly/cu124`
-  - CPU: `pip3 install --upgrade --pre torch --index-url https://download.pytorch.org/whl/nightly/cpu`
 - `pip install -r requirements/requirements.txt` for basic requirements, or another `.txt` file for specific applications.
 
 Once the dependencies have been installed, run the scripts as follows
