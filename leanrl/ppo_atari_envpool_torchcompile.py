@@ -26,6 +26,11 @@ from tensordict.nn import CudaGraphModule
 from torch.distributions.categorical import Categorical, Distribution
 
 Distribution.set_default_validate_args(False)
+
+# This is a quick fix while waiting for https://github.com/pytorch/pytorch/pull/138080 to land
+Categorical.logits = property(Categorical.__dict__["logits"].wrapped)
+Categorical.probs = property(Categorical.__dict__["probs"].wrapped)
+
 torch.set_float32_matmul_precision("high")
 
 
@@ -193,7 +198,7 @@ def gae(next_obs, next_done, container):
 def rollout(obs, done, avg_returns=[]):
     ts = []
     for step in range(args.num_steps):
-
+        torch.compiler.cudagraph_mark_step_begin()
         action, logprob, _, value = policy(obs=obs)
         next_obs_np, reward, next_done, info = envs.step(action.cpu().numpy())
         next_obs = torch.as_tensor(next_obs_np)
@@ -343,15 +348,15 @@ if __name__ == "__main__":
 
     # Compile policy
     if args.compile:
-        mode = None  # "reduce-overhead" if not args.cudagraphs else None
+        mode = "reduce-overhead" if not args.cudagraphs else None
         policy = torch.compile(policy, mode=mode)
         gae = torch.compile(gae, fullgraph=True, mode=mode)
         update = torch.compile(update, mode=mode)
 
     if args.cudagraphs:
-        policy = CudaGraphModule(policy)
-        gae = CudaGraphModule(gae)
-        update = CudaGraphModule(update)
+        policy = CudaGraphModule(policy, warmup=20)
+        #gae = CudaGraphModule(gae, warmup=20)
+        update = CudaGraphModule(update, warmup=20)
 
     avg_returns = deque(maxlen=20)
     global_step = 0
@@ -377,6 +382,7 @@ if __name__ == "__main__":
         next_obs, next_done, container = rollout(next_obs, next_done, avg_returns=avg_returns)
         global_step += container.numel()
 
+        torch.compiler.cudagraph_mark_step_begin()
         container = gae(next_obs, next_done, container)
         container_flat = container.view(-1)
 
@@ -387,6 +393,7 @@ if __name__ == "__main__":
             for b in b_inds:
                 container_local = container_flat[b]
 
+                torch.compiler.cudagraph_mark_step_begin()
                 out = update(container_local, tensordict_out=tensordict.TensorDict())
                 if args.target_kl is not None and out["approx_kl"] > args.target_kl:
                     break
