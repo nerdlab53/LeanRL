@@ -8,8 +8,8 @@ pandas
 protobuf
 pygame
 stable-baselines3
-tensordict-nightly
-torchrl-nightly
+tensordict
+torchrl
 tqdm
 tyro
 wandb

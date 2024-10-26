@@ -1,4 +1,4 @@
-gymnasium[atari,accept-rom-license]
+gymnasium[atari,accept-rom-license]<1.0.0
 jax-jumpy==1.0.0 ; python_version >= "3.8" and python_version < "3.11"
 matplotlib
 moviepy
@@ -9,6 +9,6 @@ pygame
 stable-baselines3
 tqdm
 wandb
-torchrl-nightly
-tensordict-nightly
+torchrl
+tensordict
 tyro
