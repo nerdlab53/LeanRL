@@ -10,7 +10,7 @@ To contribute to this project, please follow these steps:
 ### 1. Clone and Fork the Repository
 First, clone the repository using the following command:
 ```bash
-git clone https://github.com/pytorch-labs/leanrl.git
+git clone https://github.com/meta-pytorch/leanrl.git
 ```
 
 Then, fork the repository by clicking the "Fork" button on the top-right corner of the GitHub page. 
