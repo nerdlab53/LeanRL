@@ -219,7 +219,7 @@ Unlike CleanRL, LeanRL does not currently support `poetry`.
 Prerequisites:
 * Clone the repo locally:
   ```bash
-  git clone https://github.com/pytorch-labs/leanrl.git && cd leanrl
+  git clone https://github.com/meta-pytorch/leanrl.git && cd leanrl
   ```
 - `pip install -r requirements/requirements.txt` for basic requirements, or another `.txt` file for specific applications.
 
