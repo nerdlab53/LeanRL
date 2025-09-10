@@ -16,7 +16,7 @@ import tqdm
 import tyro
 import wandb
 from flax.training.train_state import TrainState
-from stable_baselines3.common.buffers import ReplayBuffer
+from utils.buffers import ReplayBuffer
 
 
 @dataclass
@@ -31,13 +31,13 @@ class Args:
     # Algorithm specific arguments
     env_id: str = "CartPole-v1"
     """the id of the environment"""
-    total_timesteps: int = 500000
+    total_timesteps: int = 1_000_000
     """total timesteps of the experiments"""
     learning_rate: float = 2.5e-4
     """the learning rate of the optimizer"""
     num_envs: int = 1
     """the number of parallel game environments"""
-    buffer_size: int = 10000
+    buffer_size: int = 500_000
     """the replay memory buffer size"""
     gamma: float = 0.99
     """the discount factor gamma"""
@@ -70,6 +70,7 @@ def make_env(env_id, seed, idx, capture_video, run_name):
         else:
             env = gym.make(env_id)
         env = gym.wrappers.RecordEpisodeStatistics(env)
+        env = gym.wrappers.FrameStack(env, 8)
         env.action_space.seed(seed)
 
         return env
@@ -101,15 +102,16 @@ def linear_schedule(start_e: float, end_e: float, duration: int, t: int):
 
 
 if __name__ == "__main__":
-    import stable_baselines3 as sb3
+# No need for SB3 as a dependency anymore
+#     import stable_baselines3 as sb3
 
-    if sb3.__version__ < "2.0":
-        raise ValueError(
-            """Ongoing migration: run the following command to install the new dependencies:
+#     if sb3.__version__ < "2.0":
+#         raise ValueError(
+#             """Ongoing migration: run the following command to install the new dependencies:
 
-poetry run pip install "stable_baselines3==2.0.0a1"
-"""
-        )
+# poetry run pip install "stable_baselines3==2.0.0a1"
+# """
+#         )
     args = tyro.cli(Args)
     assert args.num_envs == 1, "vectorized envs are not supported at the moment"
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}"
