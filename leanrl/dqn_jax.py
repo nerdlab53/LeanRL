@@ -113,7 +113,6 @@ if __name__ == "__main__":
 # """
 #         )
     args = tyro.cli(Args)
-    assert args.num_envs == 1, "vectorized envs are not supported at the moment"
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}"
 
     wandb.init(
@@ -193,7 +192,9 @@ if __name__ == "__main__":
             actions = jax.device_get(actions)
 
         # TRY NOT TO MODIFY: execute the game and log data.
-        next_obs, rewards, terminations, truncations, infos = envs.step(actions)
+        # For single environment, convert action array to scalar for env.step()
+        step_actions = actions.item() if args.num_envs == 1 and hasattr(actions, 'item') else actions[0] if args.num_envs == 1 else actions
+        next_obs, rewards, terminations, truncations, infos = envs.step(step_actions)
 
         # TRY NOT TO MODIFY: record rewards for plotting purposes
         if "final_info" in infos:
