@@ -88,20 +88,40 @@ def make_env(env_id, seed, idx, capture_video, run_name):
     return thunk
 
 
+# # ALGO LOGIC: initialize agent here:
+# class QNetwork(nn.Module):
+#     def __init__(self, n_obs, n_act, device=None):
+#         super().__init__()
+#         self.network = nn.Sequential(
+#             nn.Linear(n_obs, 120, device=device),
+#             nn.ReLU(),
+#             nn.Linear(120, 84, device=device),
+#             nn.ReLU(),
+#             nn.Linear(84, n_act, device=device),
+#         )
+
+#     def forward(self, x):
+#         return self.network(x)
 # ALGO LOGIC: initialize agent here:
 class QNetwork(nn.Module):
-    def __init__(self, n_obs, n_act, device=None):
+    def __init__(self, env):
         super().__init__()
         self.network = nn.Sequential(
-            nn.Linear(n_obs, 120, device=device),
+            nn.Conv2d(8, 32, 8, stride=4),
             nn.ReLU(),
-            nn.Linear(120, 84, device=device),
+            nn.Conv2d(32, 64, 4, stride=2),
             nn.ReLU(),
-            nn.Linear(84, n_act, device=device),
+            nn.Conv2d(64, 64, 3, stride=1),
+            nn.ReLU(),
+            nn.Flatten(),
+            nn.Linear(3136, 512),
+            nn.ReLU(),
+            nn.Linear(512, env.single_action_space.n),
         )
 
     def forward(self, x):
-        return self.network(x)
+        return self.network(x / 255.0)
+
 
 
 def linear_schedule(start_e: float, end_e: float, duration: int):
@@ -138,7 +158,8 @@ if __name__ == "__main__":
 
     assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
     n_act = envs.single_action_space.n
-    # Get actual observation shape after frame stacking
+    
+    # Get the actual observation shape after FrameStack to ensure correct dimensions
     obs, _ = envs.reset(seed=args.seed)
     n_obs = math.prod(obs.shape[1:])  # Skip batch dimension
 
