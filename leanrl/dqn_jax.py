@@ -16,7 +16,7 @@ import tqdm
 import tyro
 import wandb
 from flax.training.train_state import TrainState
-from .buffers import ReplayBuffer
+from buffers import ReplayBuffer
 
 
 @dataclass
@@ -84,6 +84,7 @@ class QNetwork(nn.Module):
 
     @nn.compact
     def __call__(self, x: jnp.ndarray):
+        x = x.reshape((x.shape[0], -1))
         x = nn.Dense(120)(x)
         x = nn.relu(x)
         x = nn.Dense(84)(x)
