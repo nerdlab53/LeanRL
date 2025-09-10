@@ -192,9 +192,8 @@ if __name__ == "__main__":
             actions = jax.device_get(actions)
 
         # TRY NOT TO MODIFY: execute the game and log data.
-        # For single environment, convert action array to scalar for env.step()
-        step_actions = actions.item() if args.num_envs == 1 and hasattr(actions, 'item') else actions[0] if args.num_envs == 1 else actions
-        next_obs, rewards, terminations, truncations, infos = envs.step(step_actions)
+        # Vectorized environments expect actions as arrays
+        next_obs, rewards, terminations, truncations, infos = envs.step(actions)
 
         # TRY NOT TO MODIFY: record rewards for plotting purposes
         if "final_info" in infos:
