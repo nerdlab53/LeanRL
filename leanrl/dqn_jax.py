@@ -16,7 +16,7 @@ import tqdm
 import tyro
 import wandb
 from flax.training.train_state import TrainState
-from utils.buffers import ReplayBuffer
+from .buffers import ReplayBuffer
 
 
 @dataclass
