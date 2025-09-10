@@ -88,39 +88,39 @@ def make_env(env_id, seed, idx, capture_video, run_name):
     return thunk
 
 
-# # ALGO LOGIC: initialize agent here:
-# class QNetwork(nn.Module):
-#     def __init__(self, n_obs, n_act, device=None):
-#         super().__init__()
-#         self.network = nn.Sequential(
-#             nn.Linear(n_obs, 120, device=device),
-#             nn.ReLU(),
-#             nn.Linear(120, 84, device=device),
-#             nn.ReLU(),
-#             nn.Linear(84, n_act, device=device),
-#         )
-
-#     def forward(self, x):
-#         return self.network(x)
 # ALGO LOGIC: initialize agent here:
 class QNetwork(nn.Module):
-    def __init__(self, env):
+    def __init__(self, n_obs, n_act, device=None):
         super().__init__()
         self.network = nn.Sequential(
-            nn.Conv2d(8, 32, 8, stride=4),
+            nn.Linear(8*n_obs, 120, device=device),
             nn.ReLU(),
-            nn.Conv2d(32, 64, 4, stride=2),
+            nn.Linear(120, 84, device=device),
             nn.ReLU(),
-            nn.Conv2d(64, 64, 3, stride=1),
-            nn.ReLU(),
-            nn.Flatten(),
-            nn.Linear(3136, 512),
-            nn.ReLU(),
-            nn.Linear(512, env.single_action_space.n),
+            nn.Linear(84, n_act, device=device),
         )
 
     def forward(self, x):
-        return self.network(x / 255.0)
+        return self.network(x)
+# ALGO LOGIC: initialize agent here:
+# class QNetwork(nn.Module):
+#     def __init__(self, env):
+#         super().__init__()
+#         self.network = nn.Sequential(
+#             nn.Conv2d(8, 32, 8, stride=4),
+#             nn.ReLU(),
+#             nn.Conv2d(32, 64, 4, stride=2),
+#             nn.ReLU(),
+#             nn.Conv2d(64, 64, 3, stride=1),
+#             nn.ReLU(),
+#             nn.Flatten(),
+#             nn.Linear(3136, 512),
+#             nn.ReLU(),
+#             nn.Linear(512, env.single_action_space.n),
+#         )
+
+#     def forward(self, x):
+#         return self.network(x / 255.0)
 
 
 
