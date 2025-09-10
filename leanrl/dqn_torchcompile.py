@@ -138,7 +138,9 @@ if __name__ == "__main__":
 
     assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
     n_act = envs.single_action_space.n
-    n_obs = math.prod(envs.single_observation_space.shape)
+    # Get actual observation shape after frame stacking
+    obs, _ = envs.reset(seed=args.seed)
+    n_obs = math.prod(obs.shape[1:])  # Skip batch dimension
 
     q_network = QNetwork(n_obs=n_obs, n_act=n_act, device=device)
     q_network_detach = QNetwork(n_obs=n_obs, n_act=n_act, device=device)
@@ -186,7 +188,6 @@ if __name__ == "__main__":
     start_time = None
 
     # TRY NOT TO MODIFY: start the game
-    obs, _ = envs.reset(seed=args.seed)
     obs = torch.as_tensor(obs, device=device, dtype=torch.float)
     eps_schedule = linear_schedule(args.start_e, args.end_e, args.exploration_fraction * args.total_timesteps)
     avg_returns = deque(maxlen=20)
