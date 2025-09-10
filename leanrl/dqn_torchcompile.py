@@ -66,7 +66,7 @@ class Args:
     measure_burnin: int = 3
     """Number of burn-in iterations for speed measure."""
 
-    compile: bool = False
+    compile: bool = True
     """whether to use torch.compile."""
     cudagraphs: bool = False
     """whether to use cudagraphs on top of compile."""
@@ -93,7 +93,7 @@ class QNetwork(nn.Module):
     def __init__(self, n_obs, n_act, device=None):
         super().__init__()
         self.network = nn.Sequential(
-            nn.Linear(8*n_obs, 120, device=device),
+            nn.Linear(n_obs, 120, device=device),
             nn.ReLU(),
             nn.Linear(120, 84, device=device),
             nn.ReLU(),
@@ -101,6 +101,11 @@ class QNetwork(nn.Module):
         )
 
     def forward(self, x):
+        # Flatten the input if it's not already flattened
+        if x.dim() > 2:
+            x = x.view(x.size(0), -1)
+        # Normalize pixel values from [0, 255] to [0, 1]
+        x = x / 255.0
         return self.network(x)
 # ALGO LOGIC: initialize agent here:
 # class QNetwork(nn.Module):
