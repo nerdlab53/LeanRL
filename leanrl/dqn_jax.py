@@ -70,24 +70,38 @@ def make_env(env_id, seed, idx, capture_video, run_name):
         else:
             env = gym.make(env_id)
         env = gym.wrappers.RecordEpisodeStatistics(env)
-        env = gym.wrappers.FrameStack(env, 8)
-        env.action_space.seed(seed)
 
+        env = NoopResetEnv(env, noop_max=30)
+        env = MaxAndSkipEnv(env, skip=4)
+        env = EpisodicLifeEnv(env)
+        if "FIRE" in env.unwrapped.get_action_meanings():
+            env = FireResetEnv(env)
+        env = ClipRewardEnv(env)
+        env = gym.wrappers.ResizeObservation(env, (84, 84))
+        env = gym.wrappers.GrayScaleObservation(env)
+        env = gym.wrappers.FrameStack(env, 4)
+
+        env.action_space.seed(seed)
         return env
 
     return thunk
-
 
 # ALGO LOGIC: initialize agent here:
 class QNetwork(nn.Module):
     action_dim: int
 
     @nn.compact
-    def __call__(self, x: jnp.ndarray):
-        x = x.reshape((x.shape[0], -1))
-        x = nn.Dense(120)(x)
+    def __call__(self, x):
+        x = jnp.transpose(x, (0, 2, 3, 1))
+        x = x / (255.0)
+        x = nn.Conv(32, kernel_size=(8, 8), strides=(4, 4), padding="VALID")(x)
         x = nn.relu(x)
-        x = nn.Dense(84)(x)
+        x = nn.Conv(64, kernel_size=(4, 4), strides=(2, 2), padding="VALID")(x)
+        x = nn.relu(x)
+        x = nn.Conv(64, kernel_size=(3, 3), strides=(1, 1), padding="VALID")(x)
+        x = nn.relu(x)
+        x = x.reshape((x.shape[0], -1))
+        x = nn.Dense(512)(x)
         x = nn.relu(x)
         x = nn.Dense(self.action_dim)(x)
         return x
