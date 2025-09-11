@@ -239,6 +239,17 @@ if __name__ == "__main__":
                     data.rewards.flatten().numpy(),
                     data.dones.flatten().numpy(),
                 )
+                # adding some logs
+                _loss = float(jax.device_get(loss))
+                _q_mean = float(jax.device_get(old_val).mean())
+                _q_max = float(jax.device_get(old_val).max())
+                writer.add_scalar("losses/td_loss", _loss, global_step)
+                writer.add_scalar("losses/q_value_mean", _q_mean, global_step)
+                writer.add_scalar("losses/q_value_max", _q_max, global_step)
+                try : 
+                    writer.add_scalar("charts/buffer_occupancy", rb.size(), global_step)
+                except :
+                    pass
 
             # update target network
             if global_step % args.target_network_frequency == 0:
@@ -247,17 +258,6 @@ if __name__ == "__main__":
                 )
                 
         if global_step % 100 == 0 and start_time is not None:
-            # adding some logs
-            _loss = float(jax.device_get(loss))
-            _q_mean = float(jax.device_get(old_val).mean())
-            _q_max = float(jax.device_get(old_val).max())
-            writer.add_scalar("losses/td_loss", _loss, global_step)
-            writer.add_scalar("losses/q_value_mean", _q_mean, global_step)
-            writer.add_scalar("losses/q_value_max", _q_max, global_step)
-            try : 
-                writer.add_scalar("charts/buffer_occupancy", len(rb), global_step)
-            except :
-                pass
             speed = (global_step - global_step_start) / (time.time() - start_time)
             pbar.set_description(f"speed: {speed: 4.2f} sps, " + desc)
             logs = {
