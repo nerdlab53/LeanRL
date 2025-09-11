@@ -29,7 +29,7 @@ class Args:
     """whether to capture videos of the agent performances (check out `videos` folder)"""
 
     # Algorithm specific arguments
-    env_id: str = "CartPole-v1"
+    env_id: str = "MsPacman-v5"
     """the id of the environment"""
     total_timesteps: int = 1_000_000
     """total timesteps of the experiments"""
@@ -57,12 +57,14 @@ class Args:
     """timestep to start learning"""
     train_frequency: int = 10
     """the frequency of training"""
+    fs : int = 4
+    """the number of frames to stack for each observation"""
 
     measure_burnin: int = 3
     """Number of burn-in iterations for speed measure."""
 
 
-def make_env(env_id, seed, idx, capture_video, run_name):
+def make_env(env_id, seed, idx, capture_video, run_name, fs):
     def thunk():
         if capture_video and idx == 0:
             env = gym.make(env_id, render_mode="rgb_array")
@@ -70,20 +72,13 @@ def make_env(env_id, seed, idx, capture_video, run_name):
         else:
             env = gym.make(env_id)
         env = gym.wrappers.RecordEpisodeStatistics(env)
-
-        env = NoopResetEnv(env, noop_max=30)
-        env = MaxAndSkipEnv(env, skip=4)
-        env = EpisodicLifeEnv(env)
         if "FIRE" in env.unwrapped.get_action_meanings():
             env = FireResetEnv(env)
-        env = ClipRewardEnv(env)
         env = gym.wrappers.ResizeObservation(env, (84, 84))
         env = gym.wrappers.GrayScaleObservation(env)
-        env = gym.wrappers.FrameStack(env, 4)
-
+        env = gym.wrappers.FrameStack(env, fs)
         env.action_space.seed(seed)
         return env
-
     return thunk
 
 # ALGO LOGIC: initialize agent here:
@@ -117,7 +112,8 @@ def linear_schedule(start_e: float, end_e: float, duration: int, t: int):
 
 
 if __name__ == "__main__":
-# No need for SB3 as a dependency anymore
+# no need for SB3 as a dependency anymore
+# fuck sb3
 #     import stable_baselines3 as sb3
 
 #     if sb3.__version__ < "2.0":
@@ -145,7 +141,7 @@ if __name__ == "__main__":
 
     # env setup
     envs = gym.vector.SyncVectorEnv(
-        [make_env(args.env_id, args.seed + i, i, args.capture_video, run_name) for i in range(args.num_envs)]
+        [make_env(args.env_id, args.seed + i, i, args.capture_video, run_name, args.fs) for i in range(args.num_envs)]
     )
     assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
 
@@ -199,6 +195,7 @@ if __name__ == "__main__":
 
         # ALGO LOGIC: put action logic here
         epsilon = linear_schedule(args.start_e, args.end_e, args.exploration_fraction * args.total_timesteps, global_step)
+        writer.add_scalar("charts/episilon", epsilon, global_step)
         if random.random() < epsilon:
             actions = np.array([envs.single_action_space.sample() for _ in range(envs.num_envs)])
         else:
@@ -215,6 +212,8 @@ if __name__ == "__main__":
             for info in infos["final_info"]:
                 if info and "episode" in info:
                     avg_returns.append(info["episode"]["r"])
+                    writer.add_scalar("charts/episodic_return", info["episode"]["r"])
+                    writer.add_scalar("charts/episodic_length", info["episode"]["l"])
             desc = f"global_step={global_step}, episodic_return={np.array(avg_returns).mean()}"
 
         # TRY NOT TO MODIFY: save data to reply buffer; handle `final_observation`
@@ -246,7 +245,19 @@ if __name__ == "__main__":
                 q_state = q_state.replace(
                     target_params=optax.incremental_update(q_state.params, q_state.target_params, args.tau)
                 )
+                
         if global_step % 100 == 0 and start_time is not None:
+            # adding some logs
+            _loss = float(jax.device_get(loss))
+            _q_mean = float(jax.device_get(old_val).mean())
+            _q_max = float(jax.device_get(old_val).max())
+            writer.add_scalar("losses/td_loss", _loss, global_step)
+            writer.add_scalar("losses/q_value_mean", _q_mean, global_step)
+            writer.add_scalar("losses/q_value_max", _q_max, global_step)
+            try : 
+                writer.add_scalar("charts/buffer_occupancy", len(rb), global_step)
+            except :
+                pass
             speed = (global_step - global_step_start) / (time.time() - start_time)
             pbar.set_description(f"speed: {speed: 4.2f} sps, " + desc)
             logs = {
@@ -259,5 +270,4 @@ if __name__ == "__main__":
                 },
                 step=global_step,
             )
-
     envs.close()
