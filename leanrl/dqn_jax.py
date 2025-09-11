@@ -29,7 +29,7 @@ class Args:
     """whether to capture videos of the agent performances (check out `videos` folder)"""
 
     # Algorithm specific arguments
-    env_id: str = "MsPacman-v5"
+    env_id: str = "ALE/MsPacman-v5"
     """the id of the environment"""
     total_timesteps: int = 1_000_000
     """total timesteps of the experiments"""
