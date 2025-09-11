@@ -17,6 +17,7 @@ import tyro
 import wandb
 from flax.training.train_state import TrainState
 from buffers import ReplayBuffer
+from torch.utils.tensorboard import SummaryWriter
 
 
 @dataclass
@@ -57,7 +58,7 @@ class Args:
     """timestep to start learning"""
     train_frequency: int = 10
     """the frequency of training"""
-    fs : int = 4
+    fs : int = 8
     """the number of frames to stack for each observation"""
 
     measure_burnin: int = 3
@@ -125,7 +126,7 @@ if __name__ == "__main__":
 #         )
     args = tyro.cli(Args)
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}"
-
+    writer = SummaryWriter(f"runs/{run_name}")
     wandb.init(
         project="dqn",
         name=f"{os.path.splitext(os.path.basename(__file__))[0]}-{run_name}",
@@ -186,6 +187,7 @@ if __name__ == "__main__":
     # TRY NOT TO MODIFY: start the game
     obs, _ = envs.reset(seed=args.seed)
     avg_returns = deque(maxlen=20)
+    avg_lengths = deque(maxlen=20)
     pbar = tqdm.tqdm(range(args.total_timesteps))
 
     for global_step in pbar:
@@ -195,7 +197,12 @@ if __name__ == "__main__":
 
         # ALGO LOGIC: put action logic here
         epsilon = linear_schedule(args.start_e, args.end_e, args.exploration_fraction * args.total_timesteps, global_step)
-        writer.add_scalar("charts/episilon", epsilon, global_step)
+        writer.add_scalar("charts/epsilon", epsilon, global_step)
+        wandb.log({"charts/epsilon": epsilon}, step=global_step)
+        if global_step % 100 == 0 :
+            wandb.log({
+                "charts/epsilon": epsilon
+            }, step=global_step)
         if random.random() < epsilon:
             actions = np.array([envs.single_action_space.sample() for _ in range(envs.num_envs)])
         else:
@@ -212,8 +219,13 @@ if __name__ == "__main__":
             for info in infos["final_info"]:
                 if info and "episode" in info:
                     avg_returns.append(info["episode"]["r"])
+                    avg_lengths.append(info["episode"]["l"])
                     writer.add_scalar("charts/episodic_return", info["episode"]["r"])
                     writer.add_scalar("charts/episodic_length", info["episode"]["l"])
+                    wandb.log({
+                        "charts/episodic_return": info["episode"]["r"],
+                        "charts/episodic_length": info["episode"]["l"]
+                    }, step=global_step)
             desc = f"global_step={global_step}, episodic_return={np.array(avg_returns).mean()}"
 
         # TRY NOT TO MODIFY: save data to reply buffer; handle `final_observation`
@@ -250,6 +262,12 @@ if __name__ == "__main__":
                     writer.add_scalar("charts/buffer_occupancy", rb.size(), global_step)
                 except :
                     pass
+                wandb.log({
+                    "losses/td_loss": _loss,
+                    "losses/q_values_mean": _q_mean,
+                    "losses/q_values_max": _q_max,
+                    "charts/buffer_occupancy": rb.size(),
+                }, step=global_step)
 
             # update target network
             if global_step % args.target_network_frequency == 0:
@@ -262,6 +280,7 @@ if __name__ == "__main__":
             pbar.set_description(f"speed: {speed: 4.2f} sps, " + desc)
             logs = {
                 "episode_return": np.array(avg_returns).mean(),
+                "episodic_length": np.array(avg_lengths).mean(),
             }
             wandb.log(
                 {
@@ -270,4 +289,6 @@ if __name__ == "__main__":
                 },
                 step=global_step,
             )
+            writer.add_scalar("charts/avg_episodic_return", logs["episode_return"], global_step)
+            writer.add_scalar("charts/avg_episodic_length", logs["episodic_length"], global_step)
     envs.close()
