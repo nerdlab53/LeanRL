@@ -1,5 +1,7 @@
 gymnasium[atari,accept-rom-license]
-jax-jumpy==1.0.0 ; python_version >= "3.8" and python_version < "3.11"
+jax-jumpy==1.0.0
+jax[cuda]==0.4.8
+flax==0.6.8
 matplotlib
 moviepy
 numpy<2.0
