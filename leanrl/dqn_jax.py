@@ -19,6 +19,9 @@ from flax.training.train_state import TrainState
 from buffers import ReplayBuffer
 from torch.utils.tensorboard import SummaryWriter
 
+# restrict the amount of memory pre-allocated to JAX -> this script runs well and fast enough with 30%
+os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.3"
+
 
 @dataclass
 class Args:
